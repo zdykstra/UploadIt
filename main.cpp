@@ -69,11 +69,7 @@ process_refs(entry_ref directoryRef, BMessage* msg, void*)
 
 	if (msg->FindRef("refs", &file_ref) == B_NO_ERROR) {
 		BEntry entry(&file_ref);
-		if (entry.IsDirectory()) {
-			BString text(B_TRANSLATE(
-				"UploadIt only works on a single file, no folders"));
-			CopyToClipboard(text);
-		} else if (CheckNetworkConnection() == false) {
+		if (CheckNetworkConnection() == false) {
 			BString text(B_TRANSLATE(
 				"Online upload service not available"));
 			CopyToClipboard(text);
@@ -82,11 +78,7 @@ process_refs(entry_ref directoryRef, BMessage* msg, void*)
 			BString text(B_TRANSLATE("Uploading '%FILE%'" B_UTF8_ELLIPSIS));
 			text.ReplaceAll("%FILE%", path.Leaf());
 			CopyToClipboard(text);
-
-			BString command(
-				"curl https://oshi.at -F f=@\"%FILEPATH%\" -F expire=20160 "
-				"| grep \"DL:\" | awk '{ print $2; }' | clipboard -i ; "
-				"exit");
+			BString command("webify -p %FILEPATH% | tr -d '\n' | clipboard -i");
 			command.ReplaceFirst("%FILEPATH%", path.Path());
 			system(command.String());
 		}
