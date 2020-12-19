@@ -20,6 +20,7 @@
 #include <NetworkRoster.h>
 #include <Path.h>
 #include <String.h>
+#include <Notification.h>
 
 #undef B_TRANSLATION_CONTEXT
 #define B_TRANSLATION_CONTEXT "Add-On"
@@ -60,7 +61,23 @@ CopyToClipboard(BString text)
 	}
 }
 
+BString 
+GetStdoutFromCommand(BString cmd) {
 
+  BString data;
+  FILE * stream;
+  const int max_buffer = 256;
+  char buffer[max_buffer];
+
+  stream = popen(cmd.String(), "r");
+
+  if (stream) {
+    while (!feof(stream))
+      if (fgets(buffer, max_buffer, stream) != NULL) data.Append(buffer);
+    pclose(stream);
+  }
+  return data;
+}
 extern "C" void
 process_refs(entry_ref directoryRef, BMessage* msg, void*)
 {
@@ -75,12 +92,27 @@ process_refs(entry_ref directoryRef, BMessage* msg, void*)
 			CopyToClipboard(text);
 		} else {
 			entry.GetPath(&path);
-			BString text(B_TRANSLATE("Uploading '%FILE%'" B_UTF8_ELLIPSIS));
-			text.ReplaceAll("%FILE%", path.Leaf());
-			CopyToClipboard(text);
-			BString command("webify -p %FILEPATH% | tr -d '\n' | clipboard -i");
+			BString starting(B_TRANSLATE("Uploading '%FILE%'" B_UTF8_ELLIPSIS));
+			starting.ReplaceAll("%FILE%", path.Leaf());
+			CopyToClipboard(starting);
+			
+			BNotification notification(B_INFORMATION_NOTIFICATION);
+			notification.SetTitle("UploadIt");
+			notification.SetMessageID("UploadIt");
+			notification.SetContent(starting);
+			notification.Send();
+
+			//BString command_pipe("webify -p %FILEPATH% | tr -d '\n' | clipboard -i");
+			BString command("webify -p %FILEPATH%");
 			command.ReplaceFirst("%FILEPATH%", path.Path());
-			system(command.String());
+			BString output = GetStdoutFromCommand(command.String());
+
+			BString finished(B_TRANSLATE("Finished uploading '%FILE%'" B_UTF8_ELLIPSIS));
+			finished.ReplaceAll("%FILE%", path.Leaf());
+			notification.SetOnClickApp("application/x-vnd.Haiku-WebPositive");
+			notification.AddOnClickArg(output.String());
+			notification.SetContent(finished);
+			notification.Send();
 		}
 	}
 }
