@@ -83,6 +83,9 @@ process_refs(entry_ref directoryRef, BMessage* msg, void*)
 {
 	BPath path;
 	entry_ref file_ref;
+	BNotification notification(B_INFORMATION_NOTIFICATION);
+	notification.SetTitle("UploadIt");
+	notification.SetMessageID("UploadIt");
 
 	if (msg->FindRef("refs", &file_ref) == B_NO_ERROR) {
 		BEntry entry(&file_ref);
@@ -95,17 +98,16 @@ process_refs(entry_ref directoryRef, BMessage* msg, void*)
 			BString starting(B_TRANSLATE("Uploading '%FILE%'" B_UTF8_ELLIPSIS));
 			starting.ReplaceAll("%FILE%", path.Leaf());
 			CopyToClipboard(starting);
-			
-			BNotification notification(B_INFORMATION_NOTIFICATION);
-			notification.SetTitle("UploadIt");
-			notification.SetMessageID("UploadIt");
+
 			notification.SetContent(starting);
 			notification.Send();
 
-			//BString command_pipe("webify -p %FILEPATH% | tr -d '\n' | clipboard -i");
 			BString command("webify -p %FILEPATH%");
 			command.ReplaceFirst("%FILEPATH%", path.Path());
 			BString output = GetStdoutFromCommand(command.String());
+			output.ReplaceLast("\n","");
+
+			CopyToClipboard(output);
 
 			BString finished(B_TRANSLATE("Finished uploading '%FILE%'" B_UTF8_ELLIPSIS));
 			finished.ReplaceAll("%FILE%", path.Leaf());
